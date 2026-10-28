@@ -258,11 +258,18 @@ local function apply_prompt()
     elseif p.kind=='deletecount' then
         local n=assert(tonumber(value),'Enter a byte count')
         edit(n,''); say('Deleted '..n..' bytes from buffer; Save file to persist')
-    elseif p.kind=='hex' then
-        local bytes=W.unhex(value); S.cursor=p.start
-        edit(S.patch and math.min(#bytes,#S.buffer-S.cursor) or 0,bytes)
     elseif p.kind=='line' then S.cursor=p.start; edit(p.remove,value)
-    else S.cursor=p.start; edit(0,value) end
+    elseif value=='' then say('Keyboard closed.')
+    else
+        if p.kind=='hex' then
+            local bytes=W.unhex(value); S.cursor=p.start
+            edit(S.patch and math.min(#bytes,#S.buffer-S.cursor) or 0,bytes)
+        else S.cursor=p.start; edit(0,value) end
+        -- The dialog takes 32 characters, so keep reopening it for longer text,
+        -- such as typing on a USB keyboard. An empty entry or Cancel ends it.
+        prompt(p.kind,'')
+        say('Inserted. Keep typing; an empty entry or Cancel closes the keyboard.')
+    end
     S.dirty_draw=true
 end
 local function insert_key(value)

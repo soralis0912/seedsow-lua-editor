@@ -147,6 +147,28 @@ On a machine with a POSIX shell:
 sh -n pi/install.sh
 ```
 
+## Emulator smoke tests
+
+Between hardware trials the editor can run in a Switch emulator. Results are
+iteration aids only and never replace the hardware regression pass.
+
+1. Install a community Ryujinx fork such as Ryubing (macOS builds included) or
+   the Eden build for your platform. Download only from the project's own
+   repository or site.
+2. Install `prod.keys` and the firmware dumped from **your own** console
+   (Lockpick_RCM on a hacked Switch). Match the tested console firmware where
+   possible to avoid version-gate surprises.
+3. Add your own dump of the Seedsow Lullaby demo (`010042D022AEA000`) or full
+   game (`0100EE5021C9E000`) to the emulator's game directory.
+4. Build the editor save as usual (`python editor/build.py --base
+   "YOUR_BACKUP.zip" --replace-slots`), launch the game once in the emulator so
+   a save exists, then unzip the produced `Seedsow-Lua-Editor-Save.zip` into
+   the emulator's save folder for that title so `saveg.dat` and every slot file
+   sit at the root. Back up the emulator's own save first.
+5. The game never turns on the HID keyboard, so emulator keyboard options do
+   not reach the editor; a USB keyboard only types through **Keyboard +**. To
+   drive the editor from scripts or an AI agent, see [AGENTS.md](../AGENTS.md).
+
 The original starter's exact hash/privacy regressions, source ZIP allowlist,
 publication commands, pinned Pi dependency implementation details and hardware
 release checklist are preserved in [maintainer documentation](../maintainer/README.md).

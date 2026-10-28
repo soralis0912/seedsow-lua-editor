@@ -8,7 +8,8 @@ editor. Slots 1–3 are reserved for editor recovery; use **4–120** for progra
 1. Choose a free user slot.
 2. Select **Keyboard +** to insert text at the byte cursor. A wired USB keyboard
    can type into the console's text-entry dialog, which accepts **32 characters
-   per entry** in this Switch build. Repeat **Keyboard +** for longer text.
+   per entry** in this Switch build. The dialog reopens after each entry for
+   longer text; an empty entry or Cancel closes it.
    **Edit line** replaces the current line segment; use insertion and deletion
    controls for edits that exceed the keyboard limit.
 3. The on-screen character grid is available for printable ASCII, newline,
@@ -38,8 +39,18 @@ Unsaved changes require a repeated open/navigation action before discarding.
 **Restore .bak** loads the previous file version into the buffer for inspection.
 
 Direct USB typing into the editor window is not exposed by this game's Switch
-input path. A wired keyboard works inside the system dialog. The character grid
-and optional Pi uploads do not have its 32-character dialog cap.
+input path: the game never turns on the HID keyboard. A wired keyboard works
+inside the system dialog. The character grid and optional Pi uploads do not
+have its 32-character dialog cap.
+
+## Type with a USB keyboard
+
+Open **Keyboard +** (X) and type into the system dialog. After each entry is
+inserted the dialog opens again at the new cursor position, so you can keep
+typing 32 characters at a time and press Enter between them. Submit an empty
+entry or cancel to close it. Enter in the dialog submits the entry, so add new
+lines with the character grid's **ENTER**. In HEX mode the reopened dialog
+keeps taking hex pairs.
 
 ## Place and move the cursor
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Keyboard +** reopens after each inserted entry, so a USB keyboard can keep
+  typing past the dialog's 32-character limit. An empty entry or Cancel closes
+  it.
+
+- Document emulator smoke tests in the development guide for iteration between
+  hardware trials. The game never turns on the HID keyboard, so direct USB
+  typing into the editor window is not possible.
+
 ## 0.1.3 - 2026-10-27
 
 - Record the user's successful console report for the current fresh-save build

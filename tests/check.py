@@ -178,13 +178,17 @@ class Console:
         self.frame()
 
     def prompt(self,button,value):
-        # Model repeated manual Keyboard + insertions, not a larger native dialog.
-        if button=='keyboard' and len(value)>32:
-            if self.state()[b'hex']:
+        # Longer text goes in as 32-character entries. The current editor reopens
+        # Keyboard + after each one until an empty entry; the V3 editor does not.
+        if button=='keyboard':
+            if len(value)>32 and self.state()[b'hex']:
                 value=''.join(value.split())
             for start in range(0,len(value),32):
-                self.action(button)
+                self.frame()
+                if not self.modal:self.action(button)
                 self.reply(value[start:start+32])
+            self.frame()
+            if self.modal:self.reply('')
             return
         self.action(button)
         self.reply(value)

@@ -59,7 +59,9 @@ Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
 - **Keyboard +** opens the Switch software keyboard and the game stops until it
   is answered. Read it from `GET /status` (`software_keyboard`) and answer with
   `POST /swkbd/submit {"text": "..."}` or `{"cancel": true}`. This game's
-  dialog takes at most 32 characters per entry.
+  dialog takes at most 32 characters per entry. After each entry the editor
+  reopens it, so keep submitting 32-character pieces and finish with
+  `{"text": ""}` or a cancel.
 - The status line ("N bytes | cursor N") is the easiest way to check edits.
 - **Calibrate input** shows live `isDown`/`isPush` codes, which is how to see
   what the game receives for an input. Finishing all six steps saves a new
@@ -73,5 +75,6 @@ and `ActivateTouchScreen` only, visible with the log filter
 `isDown`: holding letters, Enter, Esc, F1, arrows, Shift and Ctrl shows
 `isDown: - | isPush: -` on the calibration screen, while pad X shows `112`.
 Codes 13 and 27 seen by the editor come from the game's aliases for pad A and B,
-not from a keyboard. The software keyboard is the only text entry path in the
-emulator.
+not from a keyboard. On a console a USB keyboard types into the software
+keyboard (**Keyboard +**) instead; in Eden that dialog is answered with
+`/swkbd/submit`, since the emulated HID keyboard does not reach it either.

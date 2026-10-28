@@ -196,10 +196,14 @@ def check_navigation(c):
     tap(x,251);assert s[b'cursor']==1
     before=s[b'buffer'];c.key(27);assert s[b'buffer']==before and not s[b'code_selected']
     action('hex');c.point=(-1,-1)
-    # The Switch dialog itself accepts 32; longer edits require manual insertions.
-    s=load(b'');c.action('keyboard');c.reply('x'*40);c.frame()
-    assert s[b'buffer']==b'x'*32
+    # The Switch dialog itself accepts 32, so Keyboard + reopens after each entry
+    # until an empty one; the cursor follows the inserted text.
+    s=load(b'');c.action('keyboard');c.reply('x'*40)
+    assert s[b'buffer']==b'x'*32 and s[b'prompt'][b'kind']==b'insert'
+    c.reply('z');assert s[b'buffer']==b'x'*32+b'z' and s[b'cursor']==33
+    c.reply('');c.frame()
+    assert s[b'prompt'] is None and s[b'buffer']==b'x'*32+b'z'
     c.prompt('keyboard','y'*80);c.frame()
-    assert s[b'buffer']==b'x'*32+b'y'*80
+    assert s[b'buffer']==b'x'*32+b'z'+b'y'*80
     c.state()[b'saved']=c.state()[b'buffer']
     print('Navigation, measured touch placement, code focus, D-pad cursor mode and B exit passed.')
