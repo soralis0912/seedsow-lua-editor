@@ -7,11 +7,13 @@
 -- press B to return to the editor.
 --
 -- Honest about its reach: this Lua runs INSIDE Seedsow Lullaby, not in the
--- Switch OS. The real Nintendo system calls -- physical RAM totals via
--- svcGetInfo, the running process/title list, applet capability and permission
--- flags -- are NOT exposed to this sandbox and cannot be read from here. What
--- it shows is the in-game Lua environment you can actually poke at. See the
--- "Not reachable from here" section at the bottom of the report.
+-- Switch OS. The game DOES report some system values (OS name, game version,
+-- screen resolution, touch, the save volume) through its `game` table and
+-- `engine:var`, and those are shown in the "System" section. But the real
+-- Nintendo system calls -- available/total RAM via svcGetInfo, storage device
+-- name and free space, firmware version, serial, the running process/title
+-- list, applet/permission flags -- are NOT exposed to this sandbox and cannot
+-- be read from here. This was checked empirically (see probe notes at the end).
 --
 -- Install later:
 --   * On the console: open the editor, paste this file's text into a fresh
@@ -43,16 +45,38 @@ end
 
 add("Collected at engine tick %s", tostring(safe(function() return eng:now() end)))
 
+-- System (what the game actually reports) -------------------------------------
+-- These come from the game's `game` table and engine:var, not from the Switch
+-- OS. They are the real values the sandbox can see.
+rule("System (reported by the game)")
+local gameg = rawget(_G, "game") or {}
+local function gv(k)
+  local v = gameg[k]
+  if v == nil then return "(not reported)" end
+  return tostring(v)
+end
+add("OS:               %s", gv("os"))
+add("running on Switch: %s", gv("sw"))
+add("game version:     %s", gv("ver"))
+add("system version:   %s", gv("sysver"))
+add("screen:           %s x %s   (render %s x %s, scale %s)",
+    gv("width"), gv("height"), gv("scalewidth"), gv("scaleheight"), gv("scale"))
+add("touch input:      %s", gv("touch"))
+add("UI locale path:   %s", gv("uipath"))
+add("save storage:     %s", tostring(safe(function() return eng:var("s.savepath") end)))
+add("save slots:       %s", gv("savemax"))
+
 -- Lua runtime -----------------------------------------------------------------
 rule("Lua runtime")
 add("version: %s", tostring(_VERSION))
 local kb = safe(function() return collectgarbage("count") end)
 if kb then
-  add("Lua heap in use: %.1f KB (%d bytes)", kb, math.floor(kb * 1024))
+  add("Lua VM heap in use: %.1f KB (%d bytes)", kb, math.floor(kb * 1024))
+  add("  (this is the game's Lua heap, NOT system RAM)")
 end
 local after = safe(function() collectgarbage("collect"); return collectgarbage("count") end)
 if after then
-  add("after a full GC:  %.1f KB", after)
+  add("after a full GC:    %.1f KB", after)
 end
 
 -- Standard libraries ----------------------------------------------------------
@@ -150,14 +174,18 @@ do
 end
 
 -- What this sandbox cannot see ------------------------------------------------
-rule("Not reachable from here")
-add("This Lua runs inside the game, not in the Switch OS, so the")
-add("real Nintendo system calls are NOT exposed:")
-add("  - physical RAM / svcGetInfo memory totals")
+rule("Not reachable from here (probed)")
+add("Checked empirically: the engine's metatable __index is a native")
+add("function (hidden methods can't be listed), engine:var only returns")
+add("'s.savepath', os.getenv returns nil, and the game globals carry no")
+add("device fields. So the Switch OS is NOT exposed to this sandbox:")
+add("  - available / total system RAM (svcGetInfo)")
+add("  - storage device name and free space (only the 'save:' mount)")
+add("  - firmware version, console serial, region")
 add("  - the running process / title list")
 add("  - applet capability & permission flags")
-add("The memory figure above is the game's Lua heap only.")
-add("Everything listed above is the in-game Lua sandbox.")
+add("The memory figure above is the game's Lua heap only. Getting any of")
+add("the above would need a sandbox escape into native code.")
 
 -- ----------------------------------------------------------------------------
 -- Screen + scrolling
