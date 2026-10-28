@@ -205,7 +205,8 @@ def install_files(files, legacy=False, build_id=None):
         # Slot 4 is the HBLauncher applet; a pristine copy stays in the save so the
         # editor can later insert it into the opposite A/B side (Install launcher).
         files['sslaunch.lua'] = launcher_source()
-        examples = {4: files['sslaunch.lua'], 5: blue, 6: hello}
+        sysinfo = (ROOT/'examples/sysinfo.lua').read_bytes()
+        examples = {4: files['sslaunch.lua'], 5: blue, 6: hello, 7: sysinfo}
     for slot, source in examples.items():
         if f'save{slot:04d}.dat' not in files:
             files[f'save{slot:04d}.dat'] = files[f'ssseed{slot:03d}.bin']

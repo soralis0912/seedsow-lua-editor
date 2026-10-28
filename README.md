@@ -100,7 +100,7 @@ No other game edition has been established as incompatible by this project.
 | 2 / 14 | Optional upload calibration and receiver, side A / side B |
 | 3 / 15 | Backup editor, side A / side B |
 | 4 | HBLauncher: pick and launch your other programs |
-| 5-120 except 13-15 | Your Lua programs; examples are included in slots 5 and 6 |
+| 5-120 except 13-15 | Your Lua programs; examples are included in slots 5-7 (5 blue animation, 6 hello, 7 system/Lua inspector) |
 
 Slot 4 ships [HBLauncher](https://github.com/soralis0912/HBLauncher) (vendored as
 a submodule in `third_party/HBLauncher`): a menu that lists the programs in your
