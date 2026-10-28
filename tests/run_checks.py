@@ -17,6 +17,7 @@ from check_side_editor import main as check_side
 from check import Console
 from check_navigation import check_navigation
 from check_sides import check_sides
+from check_launcher import check_launcher
 
 
 def main(base):
@@ -64,6 +65,8 @@ def main(base):
         assert c.messages[b'zzzzsseditor.title']==b'SEEDSOW LUA EDITOR / SIDE A'
         assert not c.state()[b'config'][b'isolated']
         check_navigation(c)
+        assert 'sslaunch.lua' in current_files and b'HBLauncher' in current_files['sslaunch.lua']
+        check_launcher()
         check_sides(current_files,Path(temp))
         check_side_path=Path(temp)/'current-side'
         build_update(current/'Seedsow-Lua-Editor-Save.zip',30,check_side_path,include_save=True)

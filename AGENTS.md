@@ -48,9 +48,14 @@ curl -s -X POST localhost:8765/input/press -d '{"buttons":["A"],"frames":10}'
 ```
 
 Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
-4 LUA 4 (`sscode004.lua`) / 5 LUA 5 (`sscode005.lua`). R on the load screen
-turns to page 2: 13 B / LUA EDITOR / 14 B / PC INPUT / CALIBRATE /
-15 B / EDITOR BACKUP (side B of the editor).
+4 HBLauncher (`sscode004.lua`, from `third_party/HBLauncher/seedsow`) /
+5-6 example programs. R on the load screen turns to page 2: 13 B / LUA EDITOR /
+14 B / PC INPUT / CALIBRATE / 15 B / EDITOR BACKUP (side B of the editor).
+
+HBLauncher (slot 4) lists the program slots; Up/Down selects and A launches the
+selected slot in-process. B stops it and returns to the editor; Y re-runs the
+buffer to reopen the menu. The game ignores a slot jump from inside a running
+program, so launching is in-process.
 
 ### Inside the editor
 
@@ -61,6 +66,8 @@ turns to page 2: 13 B / LUA EDITOR / 14 B / PC INPUT / CALIBRATE /
   **Edit editor** is Right x6 from **Slot -** and **Install to B/A** is Down
   from it. Install needs a second press; it writes `sseditb1-3.lua` +
   `sseditb.sum` from side A (or `ssedit1-3.lua` + `ssedita.sum` from side B).
+  **Install launcher** (below Install to B/A) inserts HBLauncher into the
+  opposite side's first user slot (A -> slot 16, B -> slot 4) after a second press.
 - **Keyboard +** opens the Switch software keyboard and the game stops until it
   is answered. Read it from `GET /status` (`software_keyboard`) and answer with
   `POST /swkbd/submit {"text": "..."}` or `{"cancel": true}`. This game's

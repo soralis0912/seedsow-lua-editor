@@ -83,4 +83,21 @@ def check_sides(files,directory):
     pb.prompt('keyboard','print("ON SIDE B")\n');pb.action('publish')
     run=Console(disk(pb),directory/'page-2-run',pb.metadata);run.load(16)
     assert run.state()[b'side']==b'B' and run.state()[b'output'][1]==b'ON SIDE B'
+    # HBLauncher (sslaunch.lua) inserts into the opposite side's first user slot:
+    # from side A into slot 16, after a second press.
+    il=Console(files,directory/'install-launcher');il.load(1)
+    assert 'sslaunch.lua' in disk(il)
+    s=il.state();s[b'saved']=s[b'buffer']
+    il.action('installlaunch')
+    assert b'again' in s[b'status'],s[b'status']
+    il.frame();il.frame()
+    il.action('installlaunch')
+    d=disk(il)
+    assert b'HBLauncher' in d['sscode016.lua']
+    assert d['ssslot016.ref']==b'sscode016.lua\n'
+    assert il.metadata[b'saveslot'][16][b'file']==b'save0016'
+    # The launcher runs on side B when loaded from page 2.
+    rl=Console(d,directory/'run-launcher',il.metadata);rl.load(16)
+    assert rl.state()[b'side']==b'B' and rl.state()[b'running'] is True
+
     print('A/B sides: page 2 boots side B, installs go only to the other side.')

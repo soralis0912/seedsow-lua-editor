@@ -2,7 +2,9 @@
 
 Manual editing needs no network or Pi. Load slot **1** or **3** for the ordinary
 editor. Slots 1–3 and 13–15 are reserved for editor recovery; use the other
-slots from **4–120** for programs.
+slots from **4–120** for programs. Fresh saves ship **HBLauncher** in slot 4 — a
+menu that lists your program slots and launches the selected one (Up/Down to
+select, A to run, B to return to the editor, then Y to reopen the menu).
 
 ## Write and keep a program
 
@@ -144,6 +146,12 @@ end
 The default environment inherits available game globals. `e` and `engine` refer
 to the game engine; `print` appears in the editor output. The game's own save
 directory is added to `package.path` for plain Lua modules.
+
+A fullscreen program (one that calls `editor.screen`) owns the controller:
+read it with `editor.held(name)` and `editor.pressed(name)` (an edge) for
+`A B X Y L R Up Down Left Right`. **B** is reserved — it stops the program and
+returns to the editor — so use the other buttons. HBLauncher in slot 4 is a
+worked example.
 
 The optional **Guard** limits Lua instructions around user chunks/callbacks.
 It is initially on. Native calls may not be interruptible, and a program that

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **HBLauncher in slot 4:** fresh saves ship [HBLauncher](https://github.com/soralis0912/HBLauncher)
+  (vendored as a submodule in `third_party/HBLauncher`) in slot 4 — a menu that
+  lists the program slots and launches the selected one in-process. **Install
+  launcher** inserts it into the opposite A/B side. A fullscreen program now owns
+  its own input (new `editor.held` / `editor.pressed` helpers); the editor keeps
+  B as the universal "stop and return to the editor".
+
 - **A/B editor sides:** fresh saves install the editor on load-menu page 1
   (slots 1–3, side A, navy with a large A) and page 2 (slots 13–15, side B,
   purple with a large B). **Edit editor** opens the running editor's source and

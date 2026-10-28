@@ -18,6 +18,16 @@ from asb import encode_asb
 from save_globals import replace_fixed_title
 from source import core_source, recovery_source
 
+LAUNCHER = ROOT / 'third_party' / 'HBLauncher' / 'seedsow' / 'launcher.lua'
+
+
+def launcher_source():
+    """The HBLauncher Seedsow applet, embedded from the submodule."""
+    if not LAUNCHER.exists():
+        raise ValueError('HBLauncher submodule missing; run '
+                         '"git submodule update --init third_party/HBLauncher".')
+    return LAUNCHER.read_bytes()
+
 
 def load_backup(path):
     """Read flat JKSV files, also accepting one enclosing backup directory."""
@@ -187,8 +197,15 @@ def install_files(files, legacy=False, build_id=None):
             for suffix in ('.png', '_s.png'):
                 files[f'save{slot:04d}{suffix}'] = files[f'save0001{suffix}']
     files['ssethumb.png'] = files['save0001_s.png']
-    examples = {4: b'print("Hello from a persistent Lua slot!")\nprint("Press B to return to the editor.")\n',
-                5: (ROOT/'examples/blue.lua').read_bytes().replace(b'@@TOKEN@@', b'LOCAL CONTROL / included example')}
+    hello = b'print("Hello from a persistent Lua slot!")\nprint("Press B to return to the editor.")\n'
+    blue = (ROOT/'examples/blue.lua').read_bytes().replace(b'@@TOKEN@@', b'LOCAL CONTROL / included example')
+    if legacy:
+        examples = {4: hello, 5: blue}
+    else:
+        # Slot 4 is the HBLauncher applet; a pristine copy stays in the save so the
+        # editor can later insert it into the opposite A/B side (Install launcher).
+        files['sslaunch.lua'] = launcher_source()
+        examples = {4: files['sslaunch.lua'], 5: blue, 6: hello}
     for slot, source in examples.items():
         if f'save{slot:04d}.dat' not in files:
             files[f'save{slot:04d}.dat'] = files[f'ssseed{slot:03d}.bin']

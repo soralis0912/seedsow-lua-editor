@@ -99,7 +99,13 @@ No other game edition has been established as incompatible by this project.
 | 1 / 13 | Main editor, side A / side B |
 | 2 / 14 | Optional upload calibration and receiver, side A / side B |
 | 3 / 15 | Backup editor, side A / side B |
-| 4-120 except 13-15 | Your Lua programs; examples are included in slots 4 and 5 |
+| 4 | HBLauncher: pick and launch your other programs |
+| 5-120 except 13-15 | Your Lua programs; examples are included in slots 5 and 6 |
+
+Slot 4 ships [HBLauncher](https://github.com/soralis0912/HBLauncher) (vendored as
+a submodule in `third_party/HBLauncher`): a menu that lists the programs in your
+slots and launches the selected one. The editor can also install it into the
+opposite A/B side with **Install launcher**.
 
 Page 1 of the load menu is editor side A and page 2 side B; each side can
 install an edited editor into the other (see

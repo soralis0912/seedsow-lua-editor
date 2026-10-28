@@ -4,6 +4,7 @@ local CALLBACKS=SIDE_SLOT and string.format('seedsow_side_%03d_',SIDE_SLOT) or '
 local Editor={}
 local S
 local start_calibration
+local program_button
 local ROOT='zzzzsseditor'
 local PROGRAM='zzzzssprogram'
 local CODE={x=20,y=239,w=1240,h=168,text_x=22,row_h=28,size=20}
@@ -198,6 +199,36 @@ local function install_other()
     commit()
     say('Installed to side '..target..'. Load it from page '..info.page..'; side '..S.side..' is unchanged.')
 end
+local function install_launcher()
+    -- Insert the HBLauncher applet (the pristine sslaunch.lua kept by the build)
+    -- into the opposite side's first user slot: A -> slot 16, B -> slot 4.
+    assert(S.side and not SIDE_SLOT,'Launcher install needs an A/B editor installation')
+    local src=W.read(S.base,'sslaunch.lua')
+    assert(src,'No sslaunch.lua in this save; rebuild with a current editor to add HBLauncher.')
+    local chunk,why=loadstring(src,'=hblauncher')
+    assert(chunk,'Not installed: '..tostring(why))
+    local target=other_side(); local slot=(target=='A') and 4 or 16
+    local now=S.e:now()
+    if not (S.confirm=='installlaunch' and now-S.confirm_tick>=350 and now-S.confirm_tick<7000) then
+        S.confirm,S.confirm_tick='installlaunch',now
+        say('Press Install launcher again to place HBLauncher in side '..target..' slot '..slot..'.')
+        return
+    end
+    S.confirm=nil
+    local fname=code_name(slot)
+    local ok,err=W.put(S.base,fname,src); assert(ok,err)
+    ok,err=W.put(S.base,ref_name(slot),fname..'\n'); assert(ok,err)
+    local seed=assert(W.read(S.base,string.format('ssseed%03d.bin',slot)))
+    ok,err=W.put(S.base,string.format('save%04d.dat',slot),seed); assert(ok,err)
+    local thumb=W.read(S.base,'ssethumb.png')
+    if thumb then for _,suffix in ipairs({'.png','_s.png'}) do
+        local name=string.format('save%04d',slot)..suffix
+        if not exists(name) then local wrote,e2=W.put(S.base,name,thumb); assert(wrote,e2) end
+    end end
+    register(slot,'HBLauncher / side '..target)
+    metadata(); commit()
+    say('HBLauncher installed to side '..target..' slot '..slot..'. Load it from page '..SIDES[target].page..'.')
+end
 local function guarded(fn,...)
     local args={...}
     local dh=debug and debug.sethook and debug.gethook
@@ -249,6 +280,14 @@ local function run()
         local key=PROGRAM..'.r'..tostring(id)
         if not S.rects[key] then S.e:tag{'lyc',id=key,width=tostring(w),height=tostring(h),color=color}; S.rects[key]=true end
         S.e:tag{'lyprop',id=key,left=tostring(x),top=tostring(y),visible='1',alpha='255'}
+    end
+    api.base=S.base
+    local pressed_prev={}
+    -- Calibrated, program-facing input. Names: A B X Y L R Up Down Left Right.
+    api.held=function(name) return program_button(name) and true or false end
+    api.pressed=function(name)
+        local now=api.held(name); local was=pressed_prev[name]; pressed_prev[name]=now
+        return now and not was
     end
     S.api=api
     local env=setmetatable({e=S.e,engine=S.e,editor=api,print=api.print},{__index=_G})
@@ -384,6 +423,7 @@ local function action(name,value)
             remember(); say('Side '..S.side..' editor source in buffer. Edit it, then Install to '..other_side()..'.')
         end
     elseif name=='install' then install_other()
+    elseif name=='installlaunch' then install_launcher()
     elseif name=='receive' then
         start_receive(false)
     elseif name=='calibrate' then S.calibration_receive=false;start_calibration()
@@ -408,7 +448,7 @@ local function buttons()
         {'Calibrate input','calibrate'},{'Input report','inputreport'}
     }
     -- A/B tools take a seventh column so the other buttons keep their places.
-    local extra=S.side and not SIDE_SLOT and {{'Edit editor','editsrc'},{'Install to '..other_side(),'install'}} or {}
+    local extra=S.side and not SIDE_SLOT and {{'Edit editor','editsrc'},{'Install to '..other_side(),'install'},{'Install launcher','installlaunch'}} or {}
     local cols=#extra>0 and 7 or 6
     local w=math.floor((1240-(cols-1)*6)/cols)
     for i,b in ipairs(toolbar) do
@@ -536,6 +576,16 @@ local function button_input()
             if now-item.released>=50 then item.latched=false end
         end
     end
+end
+local INPUT_NAMES={A='A',B='B',X='X',Y='Y',L='L',R='R',Up='navup',Down='navdown',Left='navleft',Right='navright'}
+program_button=function(name)
+    local mapped=INPUT_NAMES[name]; if not mapped then return false end
+    if mapped:sub(1,3)=='nav' then
+        for key,n in pairs(keymap) do if n==mapped and down(key) then return true end end
+        return false
+    end
+    if S.input and S.input.valid then return S.input:held(mapped) end
+    return S.controls and S.controls:held(mapped)
 end
 start_calibration=function()
     S.receive=nil;S.running=false;S.user_update=nil;S.input:start();S.calibrate=true
@@ -743,7 +793,11 @@ _G[CALLBACKS..'frame']=function()
                 local name,value=item[1],item[2]; local token=name..':'..tostring(value)
                 if not seen[token] and now-(S.last_action[token] or -1000)>=130 then
                     seen[token]=true; S.last_action[token]=now
-                    if name:sub(1,3)=='nav' then navigate(name)
+                    if S.running and S.user_fullscreen then
+                        -- A fullscreen program owns its input (read with editor.held/
+                        -- pressed); only B still returns to the editor.
+                        if name=='back' then action('back') end
+                    elseif name:sub(1,3)=='nav' then navigate(name)
                     elseif name=='activate' then local b=S.buttons[S.focus]; action(b.name,b.value)
                     else action(name,value) end
                     if S.prompt or S.closed then break end
