@@ -48,7 +48,9 @@ curl -s -X POST localhost:8765/input/press -d '{"buttons":["A"],"frames":10}'
 ```
 
 Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
-4 LUA 4 (`sscode004.lua`) / 5 LUA 5 (`sscode005.lua`).
+4 LUA 4 (`sscode004.lua`) / 5 LUA 5 (`sscode005.lua`). R on the load screen
+turns to page 2: 13 B / LUA EDITOR / 14 B / PC INPUT / CALIBRATE /
+15 B / EDITOR BACKUP (side B of the editor).
 
 ### Inside the editor
 
@@ -56,6 +58,9 @@ Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
   it is aimed (a tap at the middle of the code window hits **Line down**).
 - From **Slot -** (where focus starts), Down x3 and Right x4 reach
   **Calibrate input**; **Keyboard +** is Right then Down from **Slot +**.
+  **Edit editor** is Right x6 from **Slot -** and **Install to B/A** is Down
+  from it. Install needs a second press; it writes `sseditb1-3.lua` +
+  `sseditb.sum` from side A (or `ssedit1-3.lua` + `ssedita.sum` from side B).
 - **Keyboard +** opens the Switch software keyboard and the game stops until it
   is answered. Read it from `GET /status` (`software_keyboard`) and answer with
   `POST /swkbd/submit {"text": "..."}` or `{"cancel": true}`. This game's

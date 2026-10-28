@@ -1,7 +1,8 @@
 # Use the console editor
 
 Manual editing needs no network or Pi. Load slot **1** or **3** for the ordinary
-editor. Slots 1–3 are reserved for editor recovery; use **4–120** for programs.
+editor. Slots 1–3 and 13–15 are reserved for editor recovery; use the other
+slots from **4–120** for programs.
 
 ## Write and keep a program
 
@@ -51,6 +52,28 @@ typing 32 characters at a time and press Enter between them. Submit an empty
 entry or cancel to close it. Enter in the dialog submits the entry, so add new
 lines with the character grid's **ENTER**. In HEX mode the reopened dialog
 keeps taking hex pairs.
+
+## A/B editor sides
+
+The editor is installed twice. Page 1 of the game's load menu (slots 1–3:
+editor, PC input / calibrate, backup) is **side A** with a navy background and a
+large **A**; page 2 (slots 13–15) is **side B** with a purple background and a
+large **B**. Programs in slots 16–24 run under side B, all others under side A.
+
+To update the editor on the console:
+
+1. Choose **Edit editor**. The running side's editor source opens in the buffer
+   as `editor-src.lua`.
+2. Edit it, for example with a USB keyboard through **Keyboard +**. **Save file**
+   keeps the work in `editor-src.lua`.
+3. Choose **Install to B** (on side B, **Install to A**) and choose it again to
+   confirm. The buffer must be valid Lua editor source; otherwise nothing is
+   written.
+4. Return to the title and load the other side's editor from its page.
+
+An editor never writes its own side, and **Repair editors** only repairs its own
+side. If the installed side does not start, load the other page and install a
+working editor back into it.
 
 ## Place and move the cursor
 

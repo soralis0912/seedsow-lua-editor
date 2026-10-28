@@ -16,6 +16,7 @@ from check_transfer import main as check_transfer
 from check_side_editor import main as check_side
 from check import Console
 from check_navigation import check_navigation
+from check_sides import check_sides
 
 
 def main(base):
@@ -60,9 +61,10 @@ def main(base):
         with zipfile.ZipFile(current/'Seedsow-Lua-Editor-Save.zip') as z:
             current_files={n:z.read(n) for n in z.namelist()}
         c=Console(current_files,Path(temp)/'main-editor');c.load(1)
-        assert c.messages[b'zzzzsseditor.title']==b'SEEDSOW LUA EDITOR'
+        assert c.messages[b'zzzzsseditor.title']==b'SEEDSOW LUA EDITOR / SIDE A'
         assert not c.state()[b'config'][b'isolated']
         check_navigation(c)
+        check_sides(current_files,Path(temp))
         check_side_path=Path(temp)/'current-side'
         build_update(current/'Seedsow-Lua-Editor-Save.zip',30,check_side_path,include_save=True)
         check_side(check_side_path)

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **A/B editor sides:** fresh saves install the editor on load-menu page 1
+  (slots 1–3, side A, navy with a large A) and page 2 (slots 13–15, side B,
+  purple with a large B). **Edit editor** opens the running editor's source and
+  **Install to A/B** writes a syntax-checked copy only into the other side, so
+  the editor can update itself from the console keyboard while the running side
+  stays as a fallback. Slots 13–15 are no longer user program slots.
+
 - **Keyboard +** reopens after each inserted entry, so a USB keyboard can keep
   typing past the dialog's 32-character limit. An empty entry or Cancel closes
   it.

@@ -10,7 +10,19 @@ local CODE={x=20,y=239,w=1240,h=168,text_x=22,row_h=28,size=20}
 local MOVEMENT={lineup=-1,linedown=1}
 local SCROLLING={scrollup=-1,scrolldown=1,pageup=-6,pagedown=6}
 local BUTTON_ACTIONS={A='activate',B='back',X='keyboard',Y='run',L='left',R='right'}
+-- Page 1 of the load menu (slots 1-12) is side A and page 2 (13-24) side B. Each side
+-- has its own editor entries and runtime copies. An editor installs edited runtimes
+-- only into the other side, so a broken install is repaired from the working page.
+local SIDES={
+    A={slots={1,2,3},cores={'ssedit1.lua','ssedit2.lua','ssedit3.lua'},sum='ssedita.sum',page=1,color='0xff14263b',mark='0x23466c'},
+    B={slots={13,14,15},cores={'sseditb1.lua','sseditb2.lua','sseditb3.lua'},sum='sseditb.sum',page=2,color='0xff3d1535',mark='0x6c2a60'}
+}
+local EDITOR_TITLES={'LUA EDITOR','PC INPUT / CALIBRATE','EDITOR BACKUP'}
 local function say(message) S.status=tostring(message); S.dirty_draw=true end
+-- Without a side (launchers from before A/B), only slots 1-3 hold editors.
+local function editor_slot(slot) return (slot>=1 and slot<=3) or (S.side~=nil and slot>=13 and slot<=15) end
+local function user_slot(slot) return slot%1==0 and slot>=4 and slot<=S.maxslot and not editor_slot(slot) end
+local function other_side() return S.side=='A' and 'B' or 'A' end
 local function attempt(fn)
     local ok,a,b=pcall(fn)
     if not ok then say(a); return false,a end
@@ -64,26 +76,31 @@ local function register(slot,title)
     sys.saveslot.check=sys.saveslot.check or {}
     sys.saveslot.check[string.format('save%04d',slot)]=true
     sys.saveslot.count=math.max(tonumber(sys.saveslot.count) or 0,slot)
-    if slot<=3 then sys.saveslot.lock[slot]=true end
+    if editor_slot(slot) then sys.saveslot.lock[slot]=true end
 end
 local function repair()
     if not SIDE_SLOT then
-        for i=1,3 do
+        -- Only the running side's files; the other side may hold a different runtime.
+        local info=SIDES[S.side or 'A']
+        for i,slot in ipairs(info.slots) do
             local targets={
-                {string.format('ssedit%d.lua',i),S.source},
-                {string.format('save%04d.dat',i),assert(W.read(S.base,string.format('ssseed%03d.bin',i)))},
-                {string.format('sed%02d.asb',i),assert(W.read(S.base,string.format('ssboot%d.bin',i)))}
+                {info.cores[i],S.source},
+                {string.format('save%04d.dat',slot),assert(W.read(S.base,string.format('ssseed%03d.bin',slot)))},
+                {slot<=3 and string.format('sed%02d.asb',slot) or string.format('ss%03d.asb',slot),assert(W.read(S.base,string.format('ssboot%d.bin',slot)))}
             }
+            if S.side and i==1 then targets[#targets+1]={info.sum,W.adler(S.source)..'\n'} end
             for _,entry in ipairs(targets) do
                 if W.read(S.base,entry[1])~=entry[2] then
                     local ok,err=W.put(S.base,entry[1],entry[2]); assert(ok,err)
                 end
             end
-            register(i,({'LUA EDITOR','PC INPUT / CALIBRATE','EDITOR BACKUP'})[i])
+        end
+        for name,side in pairs(S.side and SIDES or {A=SIDES.A}) do
+            for i,slot in ipairs(side.slots) do register(slot,(S.side and (name..' / ') or '')..EDITOR_TITLES[i]) end
         end
     end
     for slot=4,S.maxslot do
-        local ref=W.read(S.base,string.format('ssslot%03d.ref',slot))
+        local ref=user_slot(slot) and W.read(S.base,string.format('ssslot%03d.ref',slot))
         local file=ref and ref:match('^([^\r\n]+)')
         if file and W.valid(file) and not W.protected(file) and exists(string.format('save%04d.dat',slot)) then register(slot,'LUA '..slot..' / '..file) end
     end
@@ -109,7 +126,7 @@ local function read_target(name,new_if_missing)
     remember(); say(data and ('Opened '..name) or ('New file '..name))
 end
 local function open_slot(slot)
-    assert(slot%1==0 and slot>=4 and slot<=S.maxslot,'User slots are 4-'..S.maxslot..'; 1-3 are protected editors')
+    assert(user_slot(slot),'User slots are 4-'..S.maxslot..'; '..(S.side and '1-3 and 13-15' or '1-3')..' are protected editors')
     local ref=W.read(S.base,ref_name(slot))
     local name=ref and ref:match('^([^\r\n]+)') or code_name(slot)
     assert(W.valid(name) and not W.protected(name),'Invalid slot reference')
@@ -159,6 +176,27 @@ local function dirty_guard(key)
     S.confirm,S.confirm_tick=key,now
     say('Unsaved edits: repeat this action after releasing the button to discard; Save file keeps them.')
     return false
+end
+local function install_other()
+    assert(S.side and not SIDE_SLOT,'Install needs an A/B editor installation')
+    local target=other_side(); local info=SIDES[target]
+    local chunk,why=loadstring(S.buffer,'=side '..target)
+    assert(chunk,'Not installed: '..tostring(why))
+    assert(S.buffer:find('function Editor.start',1,true),'Not installed: the buffer is not editor source; use Edit editor first')
+    local now=S.e:now()
+    if not (S.confirm=='install' and now-S.confirm_tick>=350 and now-S.confirm_tick<7000) then
+        S.confirm,S.confirm_tick='install',now
+        say('Press Install to '..target..' again to replace side '..target..' with this buffer ('..#S.buffer..' bytes).')
+        return
+    end
+    S.confirm=nil
+    -- Copy, sum, then the other copies: every step leaves one copy matching the sum.
+    local sum=W.adler(S.buffer)..'\n'
+    for _,entry in ipairs({{info.cores[1],S.buffer},{info.sum,sum},{info.cores[2],S.buffer},{info.cores[3],S.buffer}}) do
+        local ok,err=W.put(S.base,entry[1],entry[2]); assert(ok,err)
+    end
+    commit()
+    say('Installed to side '..target..'. Load it from page '..info.page..'; side '..S.side..' is unchanged.')
 end
 local function guarded(fn,...)
     local args={...}
@@ -313,7 +351,10 @@ local function action(name,value)
     end
     if name=='key' then insert_key(value)
     elseif name=='prevslot' or name=='nextslot' then
-        local slot=math.max(4,math.min(S.maxslot,S.slot+(name=='prevslot' and -1 or 1)))
+        local step=name=='prevslot' and -1 or 1
+        local slot=S.slot+step
+        while slot>4 and slot<S.maxslot and not user_slot(slot) do slot=slot+step end
+        slot=math.max(4,math.min(S.maxslot,slot))
         if dirty_guard(name) then open_slot(slot) end
     elseif name=='slot' then prompt('slot',tostring(S.slot))
     elseif name=='open' then if dirty_guard(name) then open_slot(S.slot) end
@@ -336,6 +377,13 @@ local function action(name,value)
         local data,err=W.read(S.base,S.filename..'.bak'); assert(data,err)
         if dirty_guard(name) then S.cursor=0; edit(#S.buffer,data); S.cursor=0; say('Previous .bak in buffer; inspect, then Save file') end
     elseif name=='repair' then repair(); say(SIDE_SLOT and 'Slots refreshed' or 'Editor files repaired')
+    elseif name=='editsrc' then
+        if dirty_guard(name) then
+            S.navigation:reset(); S.code_selected=false
+            S.filename='editor-src.lua'; S.buffer=S.source; S.saved=S.source; S.cursor=0; S.undo={}; S.hex_pending=''
+            remember(); say('Side '..S.side..' editor source in buffer. Edit it, then Install to '..other_side()..'.')
+        end
+    elseif name=='install' then install_other()
     elseif name=='receive' then
         start_receive(false)
     elseif name=='calibrate' then S.calibration_receive=false;start_calibration()
@@ -359,10 +407,15 @@ local function buttons()
         {'Receive PC','receive'},{SIDE_SLOT and 'Refresh slots' or 'Repair editors','repair'},{'Guard ON/OFF','guard'},{'Title screen','title'},
         {'Calibrate input','calibrate'},{'Input report','inputreport'}
     }
+    -- A/B tools take a seventh column so the other buttons keep their places.
+    local extra=S.side and not SIDE_SLOT and {{'Edit editor','editsrc'},{'Install to '..other_side(),'install'}} or {}
+    local cols=#extra>0 and 7 or 6
+    local w=math.floor((1240-(cols-1)*6)/cols)
     for i,b in ipairs(toolbar) do
         local row=math.floor((i-1)/6); local col=(i-1)%6
-        add_button(b[1],b[2],nil,20+col*207,72+row*31,201,29)
+        add_button(b[1],b[2],nil,20+col*(w+6),72+row*31,w,29)
     end
+    for row,b in ipairs(extra) do add_button(b[1],b[2],nil,20+6*(w+6),72+(row-1)*31,w,29) end
     for i,b in ipairs({{'Line up','lineup'},{'Line down','linedown'},
         {'Scroll up','scrollup'},{'Scroll down','scrolldown'},
         {'Page up','pageup'},{'Page down','pagedown'}}) do
@@ -385,7 +438,7 @@ local function visible(data)
 end
 local function draw()
     local e=S.e
-    text('title',20,0,1240,38,22,SIDE_SLOT and ('LUA EDITOR / update slot '..SIDE_SLOT) or 'SEEDSOW LUA EDITOR')
+    text('title',20,0,1240,38,22,SIDE_SLOT and ('LUA EDITOR / update slot '..SIDE_SLOT) or ('SEEDSOW LUA EDITOR'..(S.side and (' / SIDE '..S.side) or '')))
     text('info',20,39,1240,30,20,string.format('Slot %d  %s%s  |  %d bytes  |  cursor %d  |  %s %s  |  Guard %s',
         S.slot,S.filename,S.buffer~=S.saved and ' *UNSAVED*' or '',#S.buffer,S.cursor,S.hex and 'HEX' or 'TEXT',S.patch and 'PATCH' or 'INSERT',S.guard and 'ON' or 'OFF'))
     for i,b in ipairs(S.buttons) do
@@ -563,7 +616,7 @@ local function receive_input()
                     assert(W.valid(name) and not W.protected(name),'Protected filename')
                     S.filename=name
                     if mode:sub(1,1)=='P' then
-                        local slot=tonumber(mode:sub(2));assert(slot>=4 and slot<=S.maxslot,'Protected or invalid user slot')
+                        local slot=tonumber(mode:sub(2));assert(user_slot(slot),'Protected or invalid user slot')
                         S.slot=slot;publish()
                     else save_file() end
                 end)
@@ -718,12 +771,15 @@ function Editor.start(engine,config,source)
     S={e=engine,base=engine:var('s.savepath'),source=source,config=config,
         slot=4,maxslot=math.min(120,(game and tonumber(game.savemax)) or 120),filename='sscode004.lua',buffer='',saved='',cursor=0,
         undo={},queue={},output={},fonts={},focus=1,last_action={},press={},hex=false,hex_pending='',patch=false,guard=true,dirty_draw=true}
+    S.side=SIDES[config.side] and config.side or nil
     S.navigation=Navigation.new()
     S.controls=Controls.new(engine,csv and csv.advkey and csv.advkey.def)
     S.input=Input.new(engine,W.read(S.base,PREFIX..'controls.txt') or W.read(S.base,'ssedit-controls.txt'))
     for _,id in ipairs({'zzlogn','zzamask','startmask','500','600','2',ROOT}) do engine:tag{'lydel',id=id} end
-    engine:tag{'lyc',id=ROOT..'.0',width='1280',height='720',color='0xff14263b'}
+    engine:tag{'lyc',id=ROOT..'.0',width='1280',height='720',color=S.side and SIDES[S.side].color or '0xff14263b'}
     engine:tag{'lyprop',id=ROOT,left='0',top='0',visible='1',alpha='255'}
+    -- A large dim side letter behind everything else; created first so it stays below.
+    if S.side then text('00mark',840,20,440,700,640,S.side,SIDES[S.side].mark) end
     for _,tag in ipairs({'autosave','skip','automode'}) do engine:tag{tag,allow='0'} end
     engine:setEventHandler{onEnterFrame=CALLBACKS..'frame',onSave='',onLoad='',onClickWaitIn='',onClickWaitOut='',onDebugSkipOut=''}
     if package and type(package.path)=='string' and not package.path:find(S.base..'/?.lua',1,true) then package.path=package.path..';'..S.base..'/?.lua' end
@@ -732,7 +788,7 @@ function Editor.start(engine,config,source)
     if not ok then say('Slot registration: '..tostring(why)) end
     local session=W.read(S.base,PREFIX..'session.txt')
     local slot=session and tonumber(session:match('^(%d+)')) or 4
-    slot=math.max(4,math.min(S.maxslot,slot or 4))
+    if not (slot and user_slot(slot)) then slot=4 end
     local opened,open_error=attempt(function() open_slot(config.run_slot or slot) end)
     if not opened then
         S.slot=4; S.filename=code_name(4); S.buffer=''; S.saved=''; S.cursor=0; S.undo={}

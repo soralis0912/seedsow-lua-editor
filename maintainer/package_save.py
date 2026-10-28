@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/'editor'))
-from build import recovery_source, bootstrap, load_backup, install_files
+from build import recovery_source, bootstrap, load_backup, install_files, slot_side
 from source import core_source as current_core
 from save_globals import replace_fixed_title
 from indexed_save import IndexedSave, Edit, string
@@ -126,7 +126,7 @@ def current_starter_files(base):
             script = f'sed{slot:02d}.asb' if slot<=3 else f'ss{slot:03d}.asb'
             commands = decode_asb(files[script])
             match = re.search(r'build_id="([0-9a-f]{8})"',commands[0][2].get('script',''))
-            if not match or files[script] != bootstrap(slot,zlib.adler32(core),match[1]):
+            if not match or files[script] != bootstrap(slot,zlib.adler32(core),match[1],slot_side(slot)):
                 raise ValueError('Unexpected current launcher: '+script)
             normalized[script] = bootstrap(slot,zlib.adler32(legacy),match[1])
             if slot<=3:

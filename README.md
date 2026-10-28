@@ -96,10 +96,14 @@ No other game edition has been established as incompatible by this project.
 
 | Slot | Purpose |
 | --- | --- |
-| 1 | Main editor |
-| 2 | Optional upload calibration and receiver |
-| 3 | Backup editor |
-| 4-120 | Your Lua programs; examples are included in slots 4 and 5 |
+| 1 / 13 | Main editor, side A / side B |
+| 2 / 14 | Optional upload calibration and receiver, side A / side B |
+| 3 / 15 | Backup editor, side A / side B |
+| 4-120 except 13-15 | Your Lua programs; examples are included in slots 4 and 5 |
+
+Page 1 of the load menu is editor side A and page 2 side B; each side can
+install an edited editor into the other (see
+[A/B editor sides](docs/07-console-editor.md#ab-editor-sides)).
 
 Open slot 1, edit a program, then choose **Save + publish** into a user slot.
 Load that slot from the game's menu to run it again. Learn the

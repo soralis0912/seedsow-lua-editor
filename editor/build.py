@@ -78,24 +78,54 @@ def launcher_template(files):
                          'Your input ZIP has not been changed.') from error
 
 
-def bootstrap(number, checksum, build_id):
+# Page 1 of the game's load menu (slots 1-12) is side A and page 2 (13-24) side B.
+# Each side has its own editor entries and runtime copies, so an editor can
+# install an edited runtime into the other side without touching its own.
+SIDES = {'A': {'editor_slots': (1, 2, 3), 'cores': ('ssedit1.lua', 'ssedit2.lua', 'ssedit3.lua'),
+               'sum': 'ssedita.sum'},
+         'B': {'editor_slots': (13, 14, 15), 'cores': ('sseditb1.lua', 'sseditb2.lua', 'sseditb3.lua'),
+               'sum': 'sseditb.sum'}}
+EDITOR_SLOTS = SIDES['A']['editor_slots'] + SIDES['B']['editor_slots']
+
+
+def slot_side(number):
+    return 'B' if 13 <= number <= 24 else 'A'
+
+
+def bootstrap(number, checksum, build_id, side=None):
+    """Launcher for one slot. With a side, the runtime checksum is read from that
+    side's sum file, so installing a new runtime does not rewrite launchers."""
     name = f'seedsow_editor_boot_{number:03d}'
     config = {'build_id': build_id}
-    if number == 2:
-        config['receive'] = True
-    if number >= 4:
-        config['run_slot'] = number
+    if side:
+        role = SIDES[side]['editor_slots'].index(number)+1 if number in EDITOR_SLOTS else None
+        config['side'] = side
+        if role == 2:
+            config['receive'] = True
+        if role is None:
+            config['run_slot'] = number
+        cores = ','.join(json.dumps(c) for c in SIDES[side]['cores'])
+        loop = ('    local ok,sum=pcall(function() return engine:file(base.."/%s") end)\n'
+                '    local expected=ok and type(sum)=="string" and tonumber(sum:match("%%d+")) or -1\n'
+                '    for _,name in ipairs({%s}) do\n') % (SIDES[side]['sum'], cores)
+        expected = 'expected'
+    else:
+        # Unchanged so existing installations' launchers are still recognized.
+        if number == 2:
+            config['receive'] = True
+        if number >= 4:
+            config['run_slot'] = number
+        loop = '    for i=1,3 do\n        local name="ssedit"..i..".lua"\n'
+        expected = str(checksum)
     lua_config = '{' + ','.join(k+'='+('true' if v is True else json.dumps(v)) for k,v in config.items()) + '}'
     source = '''function %s(engine)
     local base=engine:var("s.savepath")
     local errors={}
-    for i=1,3 do
-        local name="ssedit"..i..".lua"
-        local ok,source=pcall(function() return engine:file(base.."/"..name) end)
+%s        local ok,source=pcall(function() return engine:file(base.."/"..name) end)
         if ok and type(source)=="string" then
             local a,b=1,0
             for at=1,#source do a=(a+source:byte(at))%%65521; b=(b+a)%%65521 end
-            if b*65536+a==%d then
+            if b*65536+a==%s then
                 local chunk,why=loadstring(source,"@"..base.."/"..name)
                 if chunk then
                     local loaded,module=pcall(chunk)
@@ -110,7 +140,7 @@ def bootstrap(number, checksum, build_id):
         else errors[#errors+1]=name..": unavailable" end
     end
     engine:tag{"dialog",title="Editor recovery",textfield="t.ssedit_recovery",message=table.concat(errors,"\\n"),textfieldsize="2048"}
-end''' % (name, checksum, lua_config)
+end''' % (name, loop, expected, lua_config)
     return encode_asb([('lua', {'script':source}), ('calllua', {'function':name}),
                        ('wait', {'time':'0', 'input':'0'}), ('stop', {})])
 
@@ -132,15 +162,27 @@ def install_files(files, legacy=False, build_id=None):
                 files['saveg.dat'] = replace_fixed_title(files['saveg.dat'], title, label)
             entry_label = label.decode().strip()
             break
+    editor_slots = (1, 2, 3) if legacy else EDITOR_SLOTS
+    if not legacy:
+        taken = [slot for slot in SIDES['B']['editor_slots']
+                 if f'ssslot{slot:03d}.ref' in files or f'sscode{slot:03d}.lua' in files]
+        if taken:
+            raise ValueError('Slots 13-15 become the B side editor entries, but slot(s) '
+                             + ', '.join(map(str, taken)) + ' hold a program. Move it to another slot first.')
+        for info in SIDES.values():
+            for name in info['cores']:
+                files[name] = core
+            files[info['sum']] = f'{checksum}\n'.encode()
     for slot in range(1,121):
         script = f'sed{slot:02d}.asb' if slot <= 3 else f'ss{slot:03d}.asb'
         data = template.apply([Edit(caret[3], string('save:/sed01.asb'), string('save:/'+script))])
         files[f'ssseed{slot:03d}.bin'] = data
-        launch = bootstrap(slot, checksum, build_id)
+        launch = bootstrap(slot, checksum, build_id, None if legacy else slot_side(slot))
         files[script] = launch
-        if slot <= 3:
+        if slot in editor_slots:
             files[f'ssboot{slot}.bin'] = launch
-            files[f'ssedit{slot}.lua'] = core
+            if legacy:
+                files[f'ssedit{slot}.lua'] = core
             files[f'save{slot:04d}.dat'] = data
             for suffix in ('.png', '_s.png'):
                 files[f'save{slot:04d}{suffix}'] = files[f'save0001{suffix}']
@@ -175,7 +217,8 @@ def build(base, output=None, replace_slots=False, legacy=False):
     manifest = {'build_id':build_id, 'version':3 if legacy else 4, 'entry_label':entry_label,
                 'runtime_sha256':hashlib.sha256(files['ssedit1.lua']).hexdigest(),
                 'input_sha256':hashlib.sha256(base.read_bytes()).hexdigest(),
-                'runtime_core_adler32':checksum, 'editor_slots':[1,2,3], 'user_slots':[4,120],
+                'runtime_core_adler32':checksum,
+                'editor_slots':[1,2,3] if legacy else list(EDITOR_SLOTS), 'user_slots':[4,120],
                 'console_tested':False, 'save_zip':str(target),
                 'save_files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()},
                 'note':'Private save package; do not include it in a public source release.'}

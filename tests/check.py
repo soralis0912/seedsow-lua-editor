@@ -224,7 +224,10 @@ def check(run):
         assert native.lp(caret[3])==('save:/'+name).encode()
         commands=decode_asb(files[name])
         assert commands[1][2]['function']==f'seedsow_editor_boot_{slot:03d}'
-        if slot>=4:assert ('run_slot='+str(slot)) in commands[0][2]['script']
+        script=commands[0][2]['script']
+        editor=slot<=3 or (version>=4 and slot<=15 and slot>=13)
+        assert (('run_slot='+str(slot)) in script)==(not editor),slot
+        if version>=4:assert ('side="'+('B' if 13<=slot<=24 else 'A')+'"') in script,slot
     with tempfile.TemporaryDirectory(dir=HERE) as temporary:
         base=Path(temporary)
         c=Console(files,base/'initial')
