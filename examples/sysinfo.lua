@@ -1,4 +1,6 @@
 -- sysinfo.lua -- System / Lua environment inspector
+-- @name: System Inspector
+-- @desc: What the game reports: OS, version, resolution, Lua runtime, globals
 --
 -- Walks everything the game actually exposes to a user Lua program and shows it
 -- on screen: the Lua runtime and its heap usage, the standard libraries, the

@@ -197,7 +197,8 @@ def install_files(files, legacy=False, build_id=None):
             for suffix in ('.png', '_s.png'):
                 files[f'save{slot:04d}{suffix}'] = files[f'save0001{suffix}']
     files['ssethumb.png'] = files['save0001_s.png']
-    hello = b'print("Hello from a persistent Lua slot!")\nprint("Press B to return to the editor.")\n'
+    hello = (b'-- @name: Hello\n-- @desc: A minimal example that prints to the editor output\n'
+             b'print("Hello from a persistent Lua slot!")\nprint("Press B to return to the editor.")\n')
     blue = (ROOT/'examples/blue.lua').read_bytes().replace(b'@@TOKEN@@', b'LOCAL CONTROL / included example')
     if legacy:
         examples = {4: hello, 5: blue}

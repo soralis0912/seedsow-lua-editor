@@ -52,10 +52,14 @@ Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
 5-6 example programs. R on the load screen turns to page 2: 13 B / LUA EDITOR /
 14 B / PC INPUT / CALIBRATE / 15 B / EDITOR BACKUP (side B of the editor).
 
-HBLauncher (slot 4) lists the program slots; Up/Down selects and A launches the
-selected slot in-process. B stops it and returns to the editor; Y re-runs the
-buffer to reopen the menu. The game ignores a slot jump from inside a running
-program, so launching is in-process.
+HBLauncher (slot 4) lists the program slots as cards (monogram, name,
+description, slot). Up/Down selects, A launches the selected slot in-process,
+X refreshes the list. B stops a running program and returns to the editor; Y
+re-runs the buffer to reopen the menu. App name/description come from `-- @name:`
+/ `-- @desc:` comments near the top of each program (filename is the fallback).
+The game ignores a slot jump from inside a running program, so launching is
+in-process. Note: rect layers draw above text in this engine, so programs must
+not place labels over a rect.
 
 ### Inside the editor
 

@@ -1,3 +1,5 @@
+-- @name: Blue Screen
+-- @desc: Animated demo: moving squares and an elapsed-time counter
 local p=editor
 p.screen('0xff1646d8')
 p.label('title',40,32,48,'PC PROGRAM / BLUE SCREEN')

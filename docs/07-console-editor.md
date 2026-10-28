@@ -3,8 +3,10 @@
 Manual editing needs no network or Pi. Load slot **1** or **3** for the ordinary
 editor. Slots 1–3 and 13–15 are reserved for editor recovery; use the other
 slots from **4–120** for programs. Fresh saves ship **HBLauncher** in slot 4 — a
-menu that lists your program slots and launches the selected one (Up/Down to
-select, A to run, B to return to the editor, then Y to reopen the menu).
+card menu that lists your program slots with a name and description and launches
+the selected one (Up/Down to select, A to run, X to refresh, B to return to the
+editor, then Y to reopen the menu). A program can set its launcher name and
+description with `-- @name:` and `-- @desc:` comments near the top of its source.
 
 ## Write and keep a program
 

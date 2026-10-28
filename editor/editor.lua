@@ -275,7 +275,7 @@ local function run()
         S.user_fullscreen=true; S.rects={}
         for key in pairs(S.fonts) do if key:sub(1,#PROGRAM)==PROGRAM then S.fonts[key]=nil end end
     end
-    api.label=function(id,x,y,size,value) text(tostring(id),x,y,1210,90,size,tostring(value),nil,PROGRAM) end
+    api.label=function(id,x,y,size,value,color) text(tostring(id),x,y,1210,90,size,tostring(value),color,PROGRAM) end
     api.rect=function(id,x,y,w,h,color)
         local key=PROGRAM..'.r'..tostring(id)
         if not S.rects[key] then S.e:tag{'lyc',id=key,width=tostring(w),height=tostring(h),color=color}; S.rects[key]=true end
