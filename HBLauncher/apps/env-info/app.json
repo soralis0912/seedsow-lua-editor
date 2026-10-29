@@ -1,0 +1,10 @@
+{
+  "format": "hblauncher.seedsow-app",
+  "abi": 1,
+  "id": "env-info",
+  "name": "Environment Info",
+  "version": "1.0.0",
+  "description": "The exploit's view of memory: leaked bases, lua_State, resolved offsets (reads only)",
+  "icon": "EI",
+  "native": true
+}

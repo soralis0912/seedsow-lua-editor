@@ -104,9 +104,42 @@ local function install_staged()
   return 'installed ' .. id
 end
 
+-- uninstall an app: there is no file delete, so overwrite its source + manifest empty
+-- and drop its id from the index. Called only after a two-press confirmation.
+local function uninstall(e)
+  editor.write('hbapp.' .. e.id .. '.lua', '')
+  editor.write('hbapp.' .. e.id .. '.json', '')
+  local list = editor.read('hbapps.list') or ''
+  local kept = {}
+  for x in list:gmatch('[^\r\n]+') do
+    local id = x:match('^%s*(.-)%s*$')
+    if id ~= '' and id ~= e.id then kept[#kept + 1] = id end
+  end
+  editor.write('hbapps.list', #kept > 0 and (table.concat(kept, '\n') .. '\n') or '')
+  return 'uninstalled ' .. e.id
+end
+
+-- word-wrap for the full-screen error view (the launcher has no hb SDK of its own).
+local function wrap(text, maxchars)
+  text = tostring(text or ''); maxchars = maxchars or 84
+  local out, line = {}, ''
+  for word in text:gmatch('%S+') do
+    while #word > maxchars do
+      if line ~= '' then out[#out + 1] = line; line = '' end
+      out[#out + 1] = word:sub(1, maxchars); word = word:sub(maxchars + 1)
+    end
+    if line == '' then line = word
+    elseif #line + 1 + #word <= maxchars then line = line .. ' ' .. word
+    else out[#out + 1] = line; line = word end
+  end
+  if line ~= '' then out[#out + 1] = line end
+  return out
+end
+
 -- ------------------------------------------------------------------ input
 local CODES = {
   A = { 13, 258 }, B = { 27, 257 }, X = { 112, 259 }, Y = { 113, 256 },
+  R = { 117, 261 },
   Up = { 38, 265 }, Down = { 40, 264 }, Left = { 37, 263 }, Right = { 39, 262 },
 }
 local function is_down(name)
@@ -125,6 +158,9 @@ end
 -- ------------------------------------------------------------------ view
 local VISIBLE, CARD_TOP, CARD_H = 6, 126, 84
 local sel, top, mode, sub, note, app_hb = 1, 0, 'menu', nil, '', nil
+local primed = false    -- swallow input left over from the key that launched us
+local confirm = nil     -- id pending a second uninstall press (two-press confirm)
+local err_msg = nil     -- message shown by the full-screen error view
 local function cardY(i) return CARD_TOP + (i - 1) * CARD_H end
 local function clampsel()
   if sel > #entries then sel = #entries end
@@ -143,7 +179,7 @@ local function draw()
   editor.label('ace', 1120, 36, 20, ace_label(), ace_color())
   editor.rect('rule', 40, 86, 1200, 2, ACCENT)
   editor.label('hint', 40, 94, 20,
-    'Up/Down select   A launch   X refresh   Y install   B editor', DIM)
+    'Up/Down select   A launch   X refresh   Y install   R uninstall   B editor', DIM)
   if #entries == 0 then
     editor.label('empty', 40, 200, 24,
       'No apps. Stage one (hbstage.json + hbstage.lua) and press Y, or add via the SDK.', DIM)
@@ -164,6 +200,14 @@ local function draw()
         editor.rect('sep' .. i, 40, y + 78, 1200, 1, SEP)
       else hide_row(i) end
     end
+    -- scroll indicator: arrows in the right margin when the list overflows the page
+    if #entries > VISIBLE then
+      editor.label('scru', 1252, CARD_TOP + 2, 24, top > 0 and '^' or '', ACCENT)
+      editor.label('scrd', 1252, cardY(VISIBLE) + 48, 24,
+        (top + VISIBLE) < #entries and 'v' or '', ACCENT)
+    else
+      editor.label('scru', 40, 900, 2, ''); editor.label('scrd', 40, 900, 2, '')
+    end
   end
   local showing = #entries == 0 and '' or
     string.format('     showing %d-%d', top + 1, math.min(top + VISIBLE, #entries))
@@ -172,40 +216,91 @@ local function draw()
     .. (note ~= '' and ('     ' .. note) or ''), DIM)
 end
 
+-- ------------------------------------------------------------------ error view
+-- A full-screen error page (replaces the old footer note on failure). The editor
+-- owns B while a fullscreen program runs and always returns to the editor, so the
+-- page offers B: back out plus X: back to the launcher menu (handled here).
+local function draw_error()
+  editor.screen(BG)
+  editor.label('etitle', 40, 36, 40, 'App error', WARN)
+  editor.rect('erule', 40, 88, 1200, 2, WARN)
+  local lines = wrap(err_msg or 'unknown error', 84)
+  for i = 1, 16 do
+    editor.label('eln' .. i, 40, 120 + (i - 1) * 30, 22, lines[i] or '', NAME)
+  end
+  editor.label('eback', 40, 650, 22, 'B: back to editor      X: back to the menu', DIM)
+end
+local function fail(msg)
+  err_msg, mode, sub, app_hb = tostring(msg), 'error', nil, nil
+  draw_error()
+end
+
 -- ------------------------------------------------------------------ launch
 local function launch(e)
   local src = editor.read('hbapp.' .. e.id .. '.lua')
-  if not src then note = 'no source: ' .. e.id; draw(); return end
+  if not src then return fail('no source for "' .. e.id .. '"') end
   local fn, why = loadstring(src, '@hbapp.' .. e.id)
-  if not fn then note = 'load failed: ' .. tostring(why); draw(); return end
+  if not fn then return fail('load failed: ' .. tostring(why)) end
   local nat = e.native and get_native() or nil   -- lazy, manifest-gated ACE
   local hb = build_sdk and build_sdk(engine, editor, nat) or nil
   local env = setmetatable({ hb = hb, engine = engine, editor = editor, print = editor.print },
     { __index = _G })
   env._G = _G; setfenv(fn, env)
   local ok, ret = pcall(fn, hb)
-  if not ok then note = 'error: ' .. tostring(ret); draw(); return end
+  if not ok then return fail(ret) end
   if type(ret) == 'function' then sub = ret
   elseif type(ret) == 'table' and type(ret.update) == 'function' then sub = ret.update
   else sub = nil end
   note, mode, app_hb = '', 'run', hb
 end
 
+-- return to the menu from a running/errored app. Re-arm the first-frame swallow so
+-- the key that brought us back does not leak into the menu as a stray press.
+local function to_menu()
+  mode, sub, app_hb, confirm, note, primed = 'menu', nil, nil, nil, '', false
+  scan(); clampsel(); draw()
+end
+
 scan(); clampsel(); draw()
 
 return function()
+  -- first frame: prime edge detection so the launch key does not leak into the menu.
+  if not primed then
+    primed = true
+    for name in pairs(CODES) do pressed(name) end
+    return
+  end
+
   if mode == 'run' then
     if sub then
-      local ok = pcall(sub, app_hb)
-      if not ok then mode, sub, app_hb = 'menu', nil, nil; prev = {}; scan(); clampsel(); draw() end
+      local ok, why = pcall(sub, app_hb)
+      if not ok then fail(why) end   -- an app that errors mid-run shows the error view
     end
     return
   end
+
+  if mode == 'error' then
+    -- B is intercepted by the editor (back out); X brings us back to the menu.
+    if pressed('X') then to_menu() end
+    return
+  end
+
+  -- menu
+  local pDown, pUp = pressed('Down'), pressed('Up')
+  local pX, pY, pA, pR = pressed('X'), pressed('Y'), pressed('A'), pressed('R')
   local moved = false
-  if pressed('Down') and sel < #entries then sel = sel + 1; clampsel(); moved = true end
-  if pressed('Up')   and sel > 1          then sel = sel - 1; clampsel(); moved = true end
-  if pressed('X')    then note = ''; scan(); clampsel(); moved = true end
-  if pressed('Y')    then note = install_staged(); scan(); clampsel(); moved = true end
-  if #entries > 0 and pressed('A') then launch(entries[sel]); return end
+  -- any non-R action cancels a pending uninstall confirmation
+  if confirm and (pDown or pUp or pX or pY or pA) then confirm, note, moved = nil, '', true end
+  if pR and #entries > 0 then
+    local e = entries[sel]
+    if confirm == e.id then note = uninstall(e); confirm = nil; scan(); clampsel()
+    else confirm = e.id; note = 'uninstall "' .. e.name .. '"? press R again (other keys cancel)' end
+    moved = true
+  end
+  if pDown and sel < #entries then sel = sel + 1; clampsel(); moved = true end
+  if pUp   and sel > 1          then sel = sel - 1; clampsel(); moved = true end
+  if pX    then note = ''; scan(); clampsel(); moved = true end
+  if pY    then note = install_staged(); scan(); clampsel(); moved = true end
+  if pA and #entries > 0 then launch(entries[sel]); return end
   if moved then draw() end
 end

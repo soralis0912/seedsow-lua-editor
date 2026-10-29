@@ -48,18 +48,21 @@ curl -s -X POST localhost:8765/input/press -d '{"buttons":["A"],"frames":10}'
 ```
 
 Load screen slots: 1 LUA EDITOR / 2 PC INPUT / CALIBRATE / 3 EDITOR BACKUP /
-4 HBLauncher (`sscode004.lua`, from `third_party/HBLauncher/seedsow`) /
-5-6 example programs. R on the load screen turns to page 2: 13 B / LUA EDITOR /
-14 B / PC INPUT / CALIBRATE / 15 B / EDITOR BACKUP (side B of the editor).
+4 HBLauncher (`sscode004.lua` / `sslaunch.lua`, from the in-repo `HBLauncher/`
+folder) / 5-6 example programs. R on the load screen turns to page 2: 13 B /
+LUA EDITOR / 14 B / PC INPUT / CALIBRATE / 15 B / EDITOR BACKUP (side B).
 
-HBLauncher (slot 4) lists the program slots as cards (monogram, name,
-description, slot). Up/Down selects, A launches the selected slot in-process,
-X refreshes the list. B stops a running program and returns to the editor; Y
-re-runs the buffer to reopen the menu. App name/description come from `-- @name:`
-/ `-- @desc:` comments near the top of each program (filename is the fallback).
-The game ignores a slot jump from inside a running program, so launching is
-in-process. Note: rect layers draw above text in this engine, so programs must
-not place labels over a rect.
+HBLauncher (slot 4) is the app launcher + SDK; see `HBLauncher/docs/`. Its apps
+are slot-INDEPENDENT -- named save files (`hbapps.list` + `hbapp.<id>.json/.lua`),
+not program slots -- listed as cards (monogram, name, version, description).
+Up/Down selects, A launches the app in-process (handing it the `hb` SDK), X
+refreshes, Y installs a staged app (`hbstage.json/.lua`), R uninstalls (two
+presses). B returns to the editor; Y from the editor re-runs the launcher. ACE
+is lazy and manifest-gated: the menu is sandboxed, and only launching an app
+with `"native": true` bootstraps the exploit and hands it `hb.native` (arbitrary
+R/W + leaked module bases). Normal editor programs never get ACE. Note: rect
+layers draw above text in this engine, so programs must not place labels over a
+rect; input is polled via `engine:isDown(<keycode>)` (no editor.pressed/held).
 
 ### Inside the editor
 

@@ -59,6 +59,59 @@ local function build(engine, editor, native)
   end
   function hb.resetInput() prev = {} end
 
+  -- named colors: the launcher palette as '0xffRRGGBB' constants apps can reuse so
+  -- every app looks at home next to the launcher without hardcoding hex everywhere.
+  hb.color = {
+    bg     = '0xff0c1422',   -- background
+    sep    = '0xff22324a',   -- separators / rules (use in gaps; rects draw over text)
+    accent = '0xff3f7bd6',   -- accent / cursor
+    dim    = '0xff93a6c0',   -- secondary text
+    name   = '0xffeef3fb',   -- primary text
+    hot    = '0xff9fc6ff',   -- highlighted text
+    ok     = '0xff6fd08a',   -- success
+    warn   = '0xffd0a86f',   -- warning
+    bad    = '0xffd08a6f',   -- error
+  }
+
+  -- wrap: break text into a table of lines, each at most maxchars wide. Word-aware,
+  -- and hard-splits any single word longer than the limit. maxchars defaults to 72.
+  function hb.wrap(text, maxchars)
+    text = tostring(text or ''); maxchars = maxchars or 72
+    if maxchars < 1 then maxchars = 1 end
+    local out, line = {}, ''
+    for word in text:gmatch('%S+') do
+      while #word > maxchars do                     -- a word wider than a whole line
+        if line ~= '' then out[#out + 1] = line; line = '' end
+        out[#out + 1] = word:sub(1, maxchars); word = word:sub(maxchars + 1)
+      end
+      if line == '' then line = word
+      elseif #line + 1 + #word <= maxchars then line = line .. ' ' .. word
+      else out[#out + 1] = line; line = word end
+    end
+    if line ~= '' then out[#out + 1] = line end
+    if #out == 0 then out[1] = '' end
+    return out
+  end
+
+  -- lines: draw a table of strings as stacked labels sharing an id prefix
+  -- (idPrefix1, idPrefix2, ...). Returns the y just past the last line, so callers
+  -- can keep stacking. Pairs naturally with hb.wrap for multi-line text.
+  function hb.lines(idPrefix, x, y, size, linesTable, color)
+    size = size or 20
+    local step = math.floor(size * 1.35 + 0.5)
+    linesTable = linesTable or {}
+    for i = 1, #linesTable do
+      editor.label(idPrefix .. i, x, y + (i - 1) * step, size, tostring(linesTable[i]), color)
+    end
+    return y + #linesTable * step
+  end
+
+  -- safe: pcall wrapper. Returns ok, result (or ok, errormessage). Handy for guarding
+  -- native reads or any call that might throw without stopping the whole app.
+  function hb.safe(fn, ...)
+    return pcall(fn, ...)
+  end
+
   return hb
 end
 

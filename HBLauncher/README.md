@@ -4,12 +4,23 @@ The on-console homebrew-style launcher for the Seedsow Lua editor, plus a small
 SDK for writing apps. It replaces the former `third_party/HBLauncher` submodule:
 everything here is plain in-repo source, not a submodule.
 
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together, the two
+  design rules (gated ACE, slot-independent apps), the runtime flow and limits.
+- [docs/SDK.md](docs/SDK.md) — the `hb` SDK reference (drawing, input, storage,
+  and the privileged `hb.native` layer).
+- [docs/APP_AUTHORING.md](docs/APP_AUTHORING.md) — writing a manifest + `main.lua`
+  and installing (at build time or on-console with **Y**).
+
 ## What it is
 
 - `launcher.lua` — the applet the editor installs to slot 4. Running it is the one
-  entry point that enables the **privileged (arbitrary code execution) layer**.
-  The normal editor never loads it, so ordinary editing stays fully sandboxed; only
-  apps opened **through HBLauncher** receive `hb.native`.
+  entry point that can enable the **privileged (arbitrary code execution) layer**.
+  The normal editor never loads it, so ordinary editing stays fully sandboxed.
+  ACE is **lazy and manifest-gated**: the menu runs sandboxed, and only launching
+  an app that declares `"native": true` bootstraps the exploit and hands that app
+  `hb.native`. The launcher also installs a staged app on-console with **Y**.
 - `sdk/hb.lua` — the app-facing SDK runtime (drawing, input, storage, and the
   optional native layer). Apps talk only to `hb`.
 - `sdk/exploit.lua` — the ACE bootstrap. Returns arbitrary read/write and the
