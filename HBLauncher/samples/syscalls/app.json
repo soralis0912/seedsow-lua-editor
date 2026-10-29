@@ -1,0 +1,10 @@
+{
+  "format": "hblauncher.seedsow-app",
+  "abi": 1,
+  "id": "syscalls",
+  "name": "Syscalls",
+  "version": "1.0.0",
+  "description": "Runtime addresses of this build's SVC wrappers -- the ACE call-primitive targets",
+  "icon": "SC",
+  "native": true
+}
