@@ -112,6 +112,60 @@ local function build(engine, editor, native)
     return pcall(fn, ...)
   end
 
+  -- list: a reusable vertical selection widget. Create it once in setup, then call
+  -- :draw(h) and :step(h) each frame. opts = { id, x, y, rowH, visible, width, items }
+  -- where items is a list of { name = , desc = }. :step returns 'select' when A is
+  -- pressed on an item. Colours come from hb.color.
+  function hb.list(opts)
+    opts = opts or {}
+    local L = {
+      id = opts.id or 'lst', x = opts.x or 40, y = opts.y or 120,
+      rowH = opts.rowH or 64, visible = opts.visible or 7, width = opts.width or 1200,
+      items = opts.items or {}, sel = 1, top = 0,
+    }
+    function L:setItems(items) self.items = items or {}; self:clamp() end
+    function L:selected() return self.items[self.sel] end
+    function L:clamp()
+      if self.sel > #self.items then self.sel = #self.items end
+      if self.sel < 1 then self.sel = 1 end
+      if self.sel < self.top + 1 then self.top = self.sel - 1 end
+      if self.sel > self.top + self.visible then self.top = self.sel - self.visible end
+      if self.top < 0 then self.top = 0 end
+    end
+    function L:step(h)
+      if h.pressed('Down') and self.sel < #self.items then self.sel = self.sel + 1; self:clamp() end
+      if h.pressed('Up') and self.sel > 1 then self.sel = self.sel - 1; self:clamp() end
+      if h.pressed('A') and #self.items > 0 then return 'select' end
+      return nil
+    end
+    function L:draw(h)
+      local c = hb.color
+      local function blank(i)
+        h.label(self.id .. i .. 'n', 40, 900, 2, ''); h.label(self.id .. i .. 'd', 40, 900, 2, '')
+        h.rect(self.id .. i .. 's', 40, 900, 1, 1, c.sep)
+      end
+      if #self.items == 0 then
+        h.label(self.id .. '_e', self.x, self.y, 24, '(empty)', c.dim)
+        h.rect(self.id .. '_cur', 40, 900, 1, 1, c.accent)
+        for i = 1, self.visible do blank(i) end
+        return
+      end
+      h.rect(self.id .. '_cur', self.x - 10, self.y + (self.sel - self.top - 1) * self.rowH + 2,
+        6, self.rowH - 16, c.accent)
+      for i = 1, self.visible do
+        local e = self.items[self.top + i]
+        if e then
+          local y = self.y + (i - 1) * self.rowH
+          h.label(self.id .. i .. 'n', self.x, y, 26, e.name or '',
+            (self.top + i == self.sel) and c.hot or c.name)
+          h.label(self.id .. i .. 'd', self.x, y + 30, 18, e.desc or '', c.dim)
+          h.rect(self.id .. i .. 's', self.x, y + self.rowH - 8, self.width, 1, c.sep)
+        else blank(i) end
+      end
+    end
+    return L
+  end
+
   return hb
 end
 

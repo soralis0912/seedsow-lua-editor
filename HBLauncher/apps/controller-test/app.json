@@ -1,0 +1,9 @@
+{
+  "format": "hblauncher.seedsow-app",
+  "abi": 1,
+  "id": "controller-test",
+  "name": "Controller Test",
+  "version": "1.0.0",
+  "description": "Live button state -- a sandboxed SDK app, no ACE needed",
+  "icon": "CT"
+}

@@ -29,6 +29,14 @@ Elements are identified by a stable `id`; redraw with the same id to update in
 place. **Rect layers draw above text** — never place a rect over text; use rects
 only in gaps (rules, separators, bars). Icons are text monograms, not images.
 
+> **A text label's colour is fixed when the label is first created** — redrawing
+> the same id with a different colour does not recolour it. To show changing
+> state (a held button, a selection), use a fixed-colour **rect** and move it
+> on-screen / off-screen (to e.g. y=900), or draw into a fresh id. Rect colour is
+> likewise fixed at creation, so create it in its visible colour and toggle only
+> its position. The launcher's selection bar and the Controller Test app both do
+> this.
+
 | Call | Notes |
 | --- | --- |
 | `hb.screen(color)` | set the fullscreen background |
@@ -84,6 +92,30 @@ Reach: arbitrary R/W, the leaked module layout, `addrof`, and native function
 calls (the call primitive lives alongside these when networking is built; see
 `sdk/net.lua`). Hard limit: no code-memory SVC capability on this title, so **new**
 native code cannot be made executable — everything reuses the title's own code.
+
+## Helpers and widgets
+
+| Call | Notes |
+| --- | --- |
+| `hb.color` | named palette: `bg, sep, accent, dim, name, hot, ok, warn, bad` (all `'0xff…'`) so apps match the launcher without hardcoding hex |
+| `hb.wrap(text, maxchars)` | word-aware wrap into a table of lines (default 72); hard-splits over-long words |
+| `hb.lines(idPrefix, x, y, size, lines, color)` | draws a table of strings as stacked labels (`idPrefix1, idPrefix2, …`); returns the next free y. Pairs with `hb.wrap` |
+| `hb.safe(fn, ...)` | `pcall` wrapper returning `ok, result` |
+
+`hb.list` — a reusable vertical selection widget. Create it once, then call
+`:draw(h)` and `:step(h)` each frame:
+
+```lua
+local list = hb.list{ id = 'mods', x = 40, y = 130, rowH = 70, visible = 4,
+  items = { { name = 'main', desc = 'base 0x…' }, { name = 'sdk', desc = '…' } } }
+-- per frame:
+local action = list:step(h)   -- 'select' when A is pressed on an item, else nil
+list:draw(h)
+if action == 'select' then local item = list:selected() --[[ ... ]] end
+```
+
+`:setItems(items)` replaces the list; `:selected()` returns the current item.
+Colours come from `hb.color`. See `apps/memmap` for a full example.
 
 ## A complete minimal app
 

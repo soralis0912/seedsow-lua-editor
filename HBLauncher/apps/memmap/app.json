@@ -1,0 +1,10 @@
+{
+  "format": "hblauncher.seedsow-app",
+  "abi": 1,
+  "id": "memmap",
+  "name": "Memory Map",
+  "version": "1.0.0",
+  "description": "Runtime module layout (main/sdk segments) via the leaked bases",
+  "icon": "MM",
+  "native": true
+}
