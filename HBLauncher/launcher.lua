@@ -43,7 +43,7 @@ local function get_native()
   if f then
     local ok, boot = pcall(f)
     if ok and type(boot) == 'function' then
-      local o, n = pcall(boot)
+      local o, n = pcall(boot)   -- pass editor instead to have the bootstrap log phases to acelog.txt
       if o and type(n) == 'table' then native = n; ace_state = 'on'; return native end
     end
   end
