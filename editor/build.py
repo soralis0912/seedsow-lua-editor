@@ -18,15 +18,40 @@ from asb import encode_asb
 from save_globals import replace_fixed_title
 from source import core_source, recovery_source
 
-LAUNCHER = ROOT / 'third_party' / 'HBLauncher' / 'seedsow' / 'launcher.lua'
+HBLAUNCHER = ROOT / 'HBLauncher'
+LAUNCHER = HBLAUNCHER / 'launcher.lua'
 
 
 def launcher_source():
-    """The HBLauncher Seedsow applet, embedded from the submodule."""
+    """The HBLauncher applet (plain in-repo folder, not a submodule)."""
     if not LAUNCHER.exists():
-        raise ValueError('HBLauncher submodule missing; run '
-                         '"git submodule update --init third_party/HBLauncher".')
+        raise ValueError('HBLauncher/launcher.lua missing from the repository.')
     return LAUNCHER.read_bytes()
+
+
+def hblauncher_files():
+    """Slot-INDEPENDENT HBLauncher runtime + apps, as named save files:
+    the SDK (hb.sdk.lua), the ACE bootstrap (hb.exploit.lua), an app index
+    (hbapps.list) and each app's manifest/source (hbapp.<id>.json/.lua).
+    Apps live in HBLauncher/apps/<id>/{app.json,main.lua}; the launcher opens
+    them through the hb SDK, with no dependency on editor program slots."""
+    import json as _json
+    out = {}
+    out['hb.sdk.lua'] = (HBLAUNCHER / 'sdk' / 'hb.lua').read_bytes()
+    out['hb.exploit.lua'] = (HBLAUNCHER / 'sdk' / 'exploit.lua').read_bytes()
+    ids = []
+    apps_dir = HBLAUNCHER / 'apps'
+    for app_dir in sorted(p for p in apps_dir.iterdir() if p.is_dir()):
+        manifest = app_dir / 'app.json'
+        main = app_dir / 'main.lua'
+        if not (manifest.exists() and main.exists()):
+            continue
+        appid = _json.loads(manifest.read_text())['id']
+        out[f'hbapp.{appid}.json'] = manifest.read_bytes()
+        out[f'hbapp.{appid}.lua'] = main.read_bytes()
+        ids.append(appid)
+    out['hbapps.list'] = ('\n'.join(ids) + '\n').encode()
+    return out
 
 
 def load_backup(path):
@@ -206,6 +231,8 @@ def install_files(files, legacy=False, build_id=None):
         # Slot 4 is the HBLauncher applet; a pristine copy stays in the save so the
         # editor can later insert it into the opposite A/B side (Install launcher).
         files['sslaunch.lua'] = launcher_source()
+        # Slot-independent HBLauncher runtime + apps (SDK, ACE bootstrap, app files).
+        files.update(hblauncher_files())
         sysinfo = (ROOT/'examples/sysinfo.lua').read_bytes()
         examples = {4: files['sslaunch.lua'], 5: blue, 6: hello, 7: sysinfo}
     for slot, source in examples.items():

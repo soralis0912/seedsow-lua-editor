@@ -1,0 +1,9 @@
+{
+  "format": "hblauncher.seedsow-app",
+  "abi": 1,
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "description": "Minimal HBLauncher SDK app: drawing, input, ACE status",
+  "icon": "HE"
+}
