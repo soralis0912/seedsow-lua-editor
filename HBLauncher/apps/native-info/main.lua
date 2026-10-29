@@ -25,4 +25,9 @@ hb.label('rw', 40, 270, 24,
   'arb R/W: wrote 0x1337, read ' .. string.format('0x%x', v or 0),
   (v == 0x1337) and '0xff6fd08a' or '0xffd08a6f')
 
-hb.label('note', 40, 340, 18, n.note or '', '0xff93a6c0')
+-- resolve: turn a module-relative offset into a runtime address (ASLR defeated)
+local longjmp = n.resolve and n.resolve('sdk', 0x5511b4)
+hb.label('rs', 40, 310, 24,
+  'resolve(sdk,0x5511b4) = ' .. (longjmp and string.format('0x%x', longjmp) or 'n/a'), '0xffeef3fb')
+
+hb.label('note', 40, 370, 18, n.note or '', '0xff93a6c0')

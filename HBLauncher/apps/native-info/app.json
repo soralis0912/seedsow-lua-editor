@@ -5,5 +5,6 @@
   "name": "Native Info",
   "version": "1.0.0",
   "description": "Shows the ACE layer: leaked module bases and an arbitrary R/W check",
-  "icon": "NI"
+  "icon": "NI",
+  "native": true
 }
