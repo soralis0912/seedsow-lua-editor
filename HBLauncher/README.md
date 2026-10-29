@@ -1,8 +1,8 @@
 # HBLauncher (Seedsow)
 
 The on-console homebrew-style launcher for the Seedsow Lua editor, plus a small
-SDK for writing apps. It replaces the former `third_party/HBLauncher` submodule:
-everything here is plain in-repo source, not a submodule.
+SDK for writing apps. Everything here is plain in-repo source that the editor
+build seeds into the save.
 
 ## Documentation
 
@@ -12,10 +12,13 @@ everything here is plain in-repo source, not a submodule.
   and the privileged `hb.native` layer).
 - [docs/APP_AUTHORING.md](docs/APP_AUTHORING.md) — writing a manifest + `main.lua`
   and installing (at build time or on-console with **Y**).
+- [docs/INSTALL_FROM_PC.md](docs/INSTALL_FROM_PC.md) — installing an app from a PC
+  over the existing controller transfer (no FTP), with `tools/pack_app.py`.
 
 ## What it is
 
-- `launcher.lua` — the applet the editor installs to slot 4. Running it is the one
+- `launcher.lua` — the applet the editor installs to each side's first user slot
+  (slot 4 on side A, slot 16 on side B). Running it is the one
   entry point that can enable the **privileged (arbitrary code execution) layer**.
   The normal editor never loads it, so ordinary editing stays fully sandboxed.
   ACE is **lazy and manifest-gated**: the menu runs sandboxed, and only launching
@@ -25,7 +28,7 @@ everything here is plain in-repo source, not a submodule.
   optional native layer). Apps talk only to `hb`.
 - `sdk/exploit.lua` — the ACE bootstrap. Returns arbitrary read/write and the
   leaked module bases, or nil if the exploit can't be established.
-- `apps/<id>/` — example apps (`app.json` manifest + `main.lua`).
+- `samples/<id>/` — example apps (`app.json` manifest + `main.lua`).
 - `tools/seed.py` — writes the runtime + apps into a save directory for testing.
 
 ## Slot independence
@@ -42,11 +45,13 @@ named save files and are discovered from an index:
 | `hb.exploit.lua` | ACE bootstrap (loaded by the launcher) |
 
 The editor build (`editor/build.py`, `hblauncher_files()`) seeds these from
-`sdk/` and `apps/`. `tools/seed.py <save_dir>` does the same for a live save.
+`sdk/` and `samples/`. `tools/seed.py <save_dir>` does the same for a live save.
+Because they are plain named files (not slots), the A-side and B-side launcher
+copies **share one app store**: install an app once and it shows on both.
 
 ## Writing an app
 
-Create `apps/<id>/app.json` and `apps/<id>/main.lua`. The launcher runs `main.lua`
+Create `samples/<id>/app.json` and `samples/<id>/main.lua`. The launcher runs `main.lua`
 with the `hb` SDK as its only argument and uses the returned value as the per-frame
 update (a `function(hb)` or a table with an `update` field).
 

@@ -1,9 +1,9 @@
 # Writing and installing an HBLauncher app
 
-An app is two files in `apps/<id>/`:
+An app is two files in `samples/<id>/`:
 
 ```
-apps/my-app/
+samples/my-app/
   app.json     manifest
   main.lua     source, run with the hb SDK
 ```
@@ -76,7 +76,7 @@ of the session (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ## Installing
 
-**At build time** — put the app in `apps/<id>/`. Both the editor build
+**At build time** — put the app in `samples/<id>/`. Both the editor build
 (`editor/build.py`, `hblauncher_files()`) and `tools/seed.py` pick it up and write
 `hbapp.<id>.json`, `hbapp.<id>.lua`, and the `hbapps.list` index into the save.
 
@@ -88,7 +88,9 @@ python3 HBLauncher/tools/seed.py <save_dir>
 launcher:
 
 1. Write `hbstage.json` (the manifest) and `hbstage.lua` (the source) into the
-   save (by whatever means the editor offers).
+   save. From a PC you can send both over the editor's controller transfer (no
+   FTP) — `tools/pack_app.py` prepares them; see
+   [INSTALL_FROM_PC.md](INSTALL_FROM_PC.md).
 2. In the launcher, press **Y**. It writes `hbapp.<id>.*`, adds the id to
    `hbapps.list`, and refreshes. The app appears in the menu.
 

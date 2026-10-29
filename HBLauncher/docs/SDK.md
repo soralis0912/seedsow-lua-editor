@@ -115,7 +115,7 @@ if action == 'select' then local item = list:selected() --[[ ... ]] end
 ```
 
 `:setItems(items)` replaces the list; `:selected()` returns the current item.
-Colours come from `hb.color`. See `apps/memmap` for a full example.
+Colours come from `hb.color`. See `samples/memmap` for a full example.
 
 ## A complete minimal app
 

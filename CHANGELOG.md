@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- **HBLauncher in slot 4:** fresh saves ship [HBLauncher](https://github.com/soralis0912/HBLauncher)
-  (vendored as a submodule in `third_party/HBLauncher`) in slot 4 — a menu that
-  lists the program slots and launches the selected one in-process. **Install
-  launcher** inserts it into the opposite A/B side. A fullscreen program now owns
+- **HBLauncher:** fresh saves ship [HBLauncher](HBLauncher/) in each side's first
+  user slot (slot 4 on side A, slot 16 on side B) — a menu that lists the program
+  slots and launches the selected one in-process, plus an app SDK and a
+  slot-independent app store shared by both sides. **Install launcher** refreshes
+  the copy on the opposite A/B side. A fullscreen program now owns
   its own input (new `editor.held` / `editor.pressed` helpers); the editor keeps
   B as the universal "stop and return to the editor".
 

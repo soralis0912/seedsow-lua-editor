@@ -23,7 +23,7 @@ LAUNCHER = HBLAUNCHER / 'launcher.lua'
 
 
 def launcher_source():
-    """The HBLauncher applet (plain in-repo folder, not a submodule)."""
+    """The HBLauncher applet source (HBLauncher/launcher.lua)."""
     if not LAUNCHER.exists():
         raise ValueError('HBLauncher/launcher.lua missing from the repository.')
     return LAUNCHER.read_bytes()
@@ -33,15 +33,16 @@ def hblauncher_files():
     """Slot-INDEPENDENT HBLauncher runtime + apps, as named save files:
     the SDK (hb.sdk.lua), the ACE bootstrap (hb.exploit.lua), an app index
     (hbapps.list) and each app's manifest/source (hbapp.<id>.json/.lua).
-    Apps live in HBLauncher/apps/<id>/{app.json,main.lua}; the launcher opens
-    them through the hb SDK, with no dependency on editor program slots."""
+    Apps live in HBLauncher/samples/<id>/{app.json,main.lua}; the launcher opens
+    them through the hb SDK, with no dependency on editor program slots. The app
+    store is shared across the A/B launcher copies (slot 4 / slot 16)."""
     import json as _json
     out = {}
     out['hb.sdk.lua'] = (HBLAUNCHER / 'sdk' / 'hb.lua').read_bytes()
     out['hb.exploit.lua'] = (HBLAUNCHER / 'sdk' / 'exploit.lua').read_bytes()
     ids = []
-    apps_dir = HBLAUNCHER / 'apps'
-    for app_dir in sorted(p for p in apps_dir.iterdir() if p.is_dir()):
+    samples_dir = HBLAUNCHER / 'samples'
+    for app_dir in sorted(p for p in samples_dir.iterdir() if p.is_dir()):
         manifest = app_dir / 'app.json'
         main = app_dir / 'main.lua'
         if not (manifest.exists() and main.exists()):
@@ -228,13 +229,18 @@ def install_files(files, legacy=False, build_id=None):
     if legacy:
         examples = {4: hello, 5: blue}
     else:
-        # Slot 4 is the HBLauncher applet; a pristine copy stays in the save so the
-        # editor can later insert it into the opposite A/B side (Install launcher).
+        # HBLauncher is per-side, like the editor: the applet goes in each side's
+        # first user slot -- 4 on side A, 16 on side B -- so both pages of the load
+        # menu open it. A pristine copy also stays as sslaunch.lua so the editor's
+        # "Install launcher" can refresh the other side later. The app store the
+        # launcher reads (hbapps.list + hbapp.<id>.*) is slot-independent and shared
+        # by both copies, so an app installed from one side shows on the other.
         files['sslaunch.lua'] = launcher_source()
         # Slot-independent HBLauncher runtime + apps (SDK, ACE bootstrap, app files).
         files.update(hblauncher_files())
         sysinfo = (ROOT/'examples/sysinfo.lua').read_bytes()
-        examples = {4: files['sslaunch.lua'], 5: blue, 6: hello, 7: sysinfo}
+        examples = {4: files['sslaunch.lua'], 5: blue, 6: hello, 7: sysinfo,
+                    16: files['sslaunch.lua']}
     for slot, source in examples.items():
         if f'save{slot:04d}.dat' not in files:
             files[f'save{slot:04d}.dat'] = files[f'ssseed{slot:03d}.bin']

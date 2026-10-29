@@ -9,8 +9,10 @@ Writes slot-INDEPENDENT files:
   hbapp.<id>.json       per-app manifest
   hbapp.<id>.lua        per-app source
 
-Also writes sscode004.lua + ssslot004.ref = launcher, so the running editor loads
-the launcher when slot 4 is opened (useful for testing without a full rebuild).
+Also writes sscode004.lua/ssslot004.ref and sscode016.lua/ssslot016.ref = launcher,
+so the running editor loads HBLauncher from slot 4 (side A) or slot 16 (side B)
+without a full rebuild. The app store (hbapps.list + hbapp.<id>.*) is shared by
+both sides.
 
 Usage: seed.py <save_dir>
 """
@@ -27,14 +29,16 @@ def seed(save_dir):
 
     launcher = open(os.path.join(ROOT, 'launcher.lua')).read()
     put('sslaunch.lua', launcher)
-    put('sscode004.lua', launcher)          # testing: editor opens slot 4
+    put('sscode004.lua', launcher)          # testing: editor opens slot 4 (side A)
     put('ssslot004.ref', 'sscode004.lua\n')
+    put('sscode016.lua', launcher)          # testing: editor opens slot 16 (side B)
+    put('ssslot016.ref', 'sscode016.lua\n')
 
     put('hb.sdk.lua', open(os.path.join(ROOT, 'sdk', 'hb.lua')).read())
     put('hb.exploit.lua', open(os.path.join(ROOT, 'sdk', 'exploit.lua')).read())
 
     ids = []
-    for app_dir in sorted(glob.glob(os.path.join(ROOT, 'apps', '*'))):
+    for app_dir in sorted(glob.glob(os.path.join(ROOT, 'samples', '*'))):
         manifest_path = os.path.join(app_dir, 'app.json')
         main_path = os.path.join(app_dir, 'main.lua')
         if not (os.path.isfile(manifest_path) and os.path.isfile(main_path)):

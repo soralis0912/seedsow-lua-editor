@@ -99,13 +99,13 @@ No other game edition has been established as incompatible by this project.
 | 1 / 13 | Main editor, side A / side B |
 | 2 / 14 | Optional upload calibration and receiver, side A / side B |
 | 3 / 15 | Backup editor, side A / side B |
-| 4 | HBLauncher: pick and launch your other programs |
-| 5-120 except 13-15 | Your Lua programs; examples are included in slots 5-7 (5 blue animation, 6 hello, 7 system/Lua inspector) |
+| 4 / 16 | HBLauncher, side A / side B: pick and launch your other programs |
+| 5-120 except 13-16 | Your Lua programs; examples are included in slots 5-7 (5 blue animation, 6 hello, 7 system/Lua inspector) |
 
-Slot 4 ships [HBLauncher](https://github.com/soralis0912/HBLauncher) (vendored as
-a submodule in `third_party/HBLauncher`): a menu that lists the programs in your
-slots and launches the selected one. The editor can also install it into the
-opposite A/B side with **Install launcher**.
+Each side's first user slot ships [HBLauncher](HBLauncher/) — slot 4 on side A,
+slot 16 on side B: a menu that lists the programs in your slots and launches the
+selected one, plus a small SDK and a shared app store. The editor can refresh the
+copy on the opposite A/B side with **Install launcher**.
 
 Page 1 of the load menu is editor side A and page 2 side B; each side can
 install an edited editor into the other (see

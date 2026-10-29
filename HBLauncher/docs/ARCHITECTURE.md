@@ -30,7 +30,7 @@ HBLauncher/
     hb.lua            the app-facing SDK runtime (drawing, input, storage, native)
     exploit.lua       the ACE bootstrap: returns arbitrary R/W + leaked bases, or nil
     net.lua           socket wrappers over the native call primitive (networking)
-  apps/<id>/
+  samples/<id>/
     app.json          manifest: id, name, version, description, icon, native
     main.lua          app source (run with the hb SDK)
   tools/seed.py       writes the runtime + apps into a save directory
@@ -105,9 +105,23 @@ slot.** You can install any number of apps without touching the editor's slots,
 and apps move as plain files (seeded at build time, transferred later, or staged
 and installed with **Y** on the console).
 
+## A/B sides
+
+The editor has two independent installations: side A (load-menu page 1, editor
+slots 1-3) and side B (page 2, slots 13-15), so you can update one side's editor
+runtime from the other. HBLauncher follows the same shape: the applet lives in
+each side's **first user slot — slot 4 on side A, slot 16 on side B** — and the
+build seeds both. The editor's **Install launcher** action refreshes the copy on
+the opposite side (it reads the pristine `sslaunch.lua` the build keeps).
+
+The *applet* is therefore per-side, but the *app store* it reads
+(`hbapps.list`, `hbapp.<id>.*`, `hb.sdk.lua`, `hb.exploit.lua`, `hbstage.*`) is a
+single set of named files **shared by both sides** — installing, staging or
+uninstalling an app from either side's launcher affects the one shared store.
+
 ## Installing apps
 
-- **At build time:** `editor/build.py` seeds `sdk/` and `apps/` into the save via
+- **At build time:** `editor/build.py` seeds `sdk/` and `samples/` into the save via
   `hblauncher_files()`. `tools/seed.py <save_dir>` does the same for a live save.
 - **On the console:** write a `hbstage.json` + `hbstage.lua` into the save (by any
   means the editor offers) and press **Y** in the launcher. It registers the app
